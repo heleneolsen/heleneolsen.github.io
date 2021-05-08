@@ -1,8 +1,255 @@
 ---
-title: "Project 2"
-author: "Me"
-date: "2020-12-01"
+title: "project 2"
+author: "Helene Olsen"
+date: "5/5/2021"
 output: html_document
 ---
 
-## Test Project 2
+```{r setup, include=FALSE}
+library(knitr)
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE,fig.align="center",warning=FALSE,message=FALSE,fig.width=8, fig.height=5, linewidth=60)
+options(tibble.width = 100,width = 100)
+library(tidyverse)
+```
+
+## Project 2 
+
+# Dataset:
+```{r cars}
+library(DAAG)
+hurricNamed
+
+# I am splitting the states to only have 1 state to make my following tests easier to understand
+hurric <- hurricNamed%>%separate(AffectedStates,into = c("State", NA), sep=',', convert=T)
+
+```
+*The dataset I am using is located in the DAAG package called hurricNamed. This dataset contains information about 94 US Atlantic hurricanesfrom 1950-2012. The variables include, year, name of the hurricane, gender of name, states affected, the number of deaths, property damage in millions of 2014 dollars, maximum windspeed in MPH, and atmospheric pressure at landfall in MB.* 
+
+# MANOVA 
+```{r }
+#Performing MANOVA
+man1<-manova(cbind(deaths,LF.PressureMB, LF.WindsMPH, BaseDam2014)~mf, data=hurric)
+summary(man1)
+
+#performing univariate ANOVAs
+summary.aov(man1)
+
+#t test on mf / variable just to check 
+pairwise.t.test(hurric$deaths,hurric$mf, p.adj="none")
+pairwise.t.test(hurric$LF.WindsMPH,hurric$mf, p.adj="none")
+pairwise.t.test(hurric$LF.PressureMB,hurric$mf, p.adj="none")
+pairwise.t.test(hurric$BaseDam2014,hurric$mf, p.adj="none")
+
+```
+*According to the MANOVA, none of the following variables differ significantly by the gender of the hurricane: deaths, pressure, wind speed, property damage. Running univariate ANOVAs confirmed that none of the variance was significant. An additional t test confirmed this further. After using these nine tests, the probability of at least one Type I error is 0.37 (1-0.95^9). With Bonferri correction, the p value would need to be less than 0.005. The MANOVA test makes several assumptions about the data, that the samples are random and independent, that the DVs have multivariate normality, there is homogeneity within group covariance matrixes, a linear relationship between DVs, and lastly no extreme outliers or multicollinearity. I think it is unlikely for all of these to have been met in the dataset.*
+
+#Randomization Test 
+```{r}
+#Plot of data
+hurric%>%select(mf,deaths)%>%pivot_longer(-1,names_to='DV', values_to='measure')%>%
+  ggplot(aes(mf,measure,fill=mf))+geom_bar(stat="summary")+geom_errorbar(stat="summary", width=.5)+
+  facet_wrap(~DV, nrow=2)+coord_flip()+ylab("")+theme(legend.position = "none")
+
+#simulate own null distribution
+hurric%>%group_by(mf)%>%
+  summarize(means=mean(deaths))%>%summarize(`mean_diff`=diff(means))
+
+
+# if null hypothesis is true this would be mean diff
+rand_dist<-vector() #create vector to hold diffs under null hypothesis
+
+for(i in 1:5000){
+new<-data.frame(death=sample(hurric$deaths),mf=hurric$mf) #scramble columns
+rand_dist[i]<-mean(new[new$mf=="m",]$death)-   
+              mean(new[new$mf=="f",]$death)} #compute mean difference (base R)
+
+hist(rand_dist,main="",ylab=""); abline(v = c(-43.97, 43.97),col="red")
+
+#two tailed p value 
+mean(rand_dist>43.97 | rand_dist < -43.97)
+
+```
+*Because deaths had the most significant result when splitting up hurricane by gender, I decided to perform a randomization test on it. The null hypothesis is that there is no significant difference between male and female hurricanes when it comes to the amount of deaths they caused. The alternative hypothesis is that there is a significant difference. I performed a permutation test on the mean differences. Because the p value is greater than 0.05, we fail to reject the null hypothesis.*
+
+# Linear Regression 
+```{r}
+#mean center numeric
+hurric$wind_c <- hurric$LF.WindsMPH - mean(hurric$LF.WindsMPH)
+
+#run linear regression
+fit<-lm(BaseDam2014 ~ Year * wind_c, data=hurric)
+summary(fit)
+
+#graph
+ggplot(hurric, aes(y=BaseDam2014, x=wind_c, color=Year)) + geom_point() + geom_smooth(method="lm")
+
+#check for homoskedacity 
+library(sandwich)
+library(lmtest)
+resids<-fit$residuals; fitvals<-fit$fitted.values
+ggplot()+geom_point(aes(fitvals,resids))+geom_hline(yintercept=0, col="red")
+bptest(fit)
+
+#check for normality
+ggplot()+geom_histogram(aes(resids),bins=20)
+
+#Linearity
+ggplot()+geom_qq(aes(sample=resids))+geom_qq_line(aes(sample=resids), color='red')
+
+#robust standard errors
+coeftest(fit, vcov = vcovHC(fit))[,1:2] 
+
+```
+*A linear regression is done to see if there is an effect of the year or wind speed on property damage (adjusted to 2014 dollars). The predicted property damage for a year in the middle with average wind damage is -5.06e+05. Years with no wind speed have a predicted property damage cost of 2.58e+02. Wind has a significant effect on property damage for years in the middle, but for every increase in wind MPH, the damage goes down by -1.144e+04. The slope of wind speed on property damage for middle years is 5.87 times greater than for other years. R squared is 0.198, so only 19.8% of the variation in response variable is due to these two variables. I checked for normality, linearity, and homoskedacity. After recomputing with robust standard errors, none of the estimates changed but the standard errors increased.* 
+
+#Bootstraping 
+```{r}
+samp_distn<-replicate(5000, { 
+  boot_dat <- sample_frac(hurric, replace=T) 
+  boot_fit <- lm(BaseDam2014~Year*wind_c, data=boot_dat) 
+  coef(boot_fit)
+  }) 
+
+boot_dat <- sample_frac(hurric, replace=T) 
+boot_fit <- lm(BaseDam2014~Year*wind_c, data=boot_dat) 
+  coef(boot_fit)
+ summary(boot_fit)
+ 
+## Estimated SEs
+samp_distn %>% t %>% as.data.frame %>% summarize_all(sd)
+
+```
+*These standard errors are lower than the robust standard errors, but higher than the original standard errors. The p values are all lower. *
+
+# Predict Binary Variable (male or female hurricane) using property damage in 2014 and deaths
+```{r}
+data<-hurric%>%mutate(y=ifelse(mf=="m",1,0))
+head(data)
+
+fit2<-glm(y~deaths+BaseDam2014, family="binomial", data=data)
+coeftest(fit2)
+
+#confusion matrix
+prob<-predict(fit2,type="response")
+pred<-ifelse(prob>.5,1,0)
+table(truth=hurric$mf, prediction=pred)%>%addmargins
+
+#auc
+library(plotROC) 
+
+ROCplot<-ggplot(hurric)+geom_roc(aes(d=mf,m=prob), n.cuts=0)+  geom_segment(aes(x=0,xend=1,y=0,yend=1),lty=2) 
+
+ROCplot
+calc_auc(ROCplot)
+
+#density plot 
+data$logit<-predict(fit2,type="link")
+
+data%>%ggplot()+geom_density(aes(logit,color=mf,fill=mf), alpha=.4)+
+  theme(legend.position=c(.85,.85))+geom_vline(xintercept=0)+xlab("predictor (logit)")
+
+```
+*Looking at the coefficients, deaths multiplies the odds of the hurricane being a male by a factor of e^-0.02 (0.98), while property damage multiplies the odds by a factor of e^.00007 (~1). Looking at the confusion matrix, the accuracy is (63+3)/95 = 0.69, the sensitivity is 0.75, the specificity is 0.7, and the precision is 0.1. The AUC is only 0.6, which is not good. This means it did not perform very well.*
+
+#This is for the next part 
+```{R}
+## GIVE IT PREDICTED PROBS AND TRUTH LABELS, RETURNS VARIOUS DIAGNOSTICS
+
+class_diag<-function(probs,truth){
+  
+  if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+  
+  tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+  prediction<-ifelse(probs>.5,1,0)
+  acc=mean(truth==prediction)
+  sens=mean(prediction[truth==1]==1)
+  spec=mean(prediction[truth==0]==0)
+  ppv=mean(truth[prediction==1]==1)
+  f1=2*(sens*ppv)/(sens+ppv)
+  
+  #CALCULATE EXACT AUC
+  ord<-order(probs, decreasing=TRUE)
+  probs <- probs[ord]; truth <- truth[ord]
+  
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+  TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+  
+  n <- length(TPR)
+  auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,auc)
+}
+```
+
+# Predict binary using all variables 
+```{r}
+fit3<-glm(y~(.)^2,data=data,family="binomial")
+coef(fit3)
+
+probs3<-predict(fit3,type="response")
+
+#compute diagnostics
+class_diag(probs3,data$y)
+
+# 10-fold CV
+
+set.seed(1234)
+k=10 #choose number of folds
+
+data1<-data[sample(nrow(data)),] #randomly order rows
+folds<-cut(seq(1:nrow(data)),breaks=k,labels=F) #create folds
+
+diags<-NULL
+for(i in 1:k){
+  ## Create training and test sets
+  train<-data1[folds!=i,] 
+  test<-data1[folds==i,]
+  
+  truth<-test$y ## Truth labels for fold i
+  
+  ## Train model on training set (all but fold i)
+  fit<-glm(y~deaths,data=train,family="binomial")
+  
+  ## Test model on test set (fold i) 
+  probs<-predict(fit,newdata = test,type="response")
+  
+  ## Get diagnostics for fold i
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+#average diagnostics 
+summarize_all(diags,mean)
+
+
+#Lasso 
+library(glmnet)
+y<-as.matrix(data$y) #grab response
+x<-model.matrix(y~.,data=data)[,-1] #grab predictors
+head(x)
+
+
+cv <- cv.glmnet(x,y) #picks an optimal value for lambda through 10-fold CV
+
+{plot(cv$glmnet.fit, "lambda", label=TRUE); abline(v = log(cv$lambda.1se)); abline(v = log(cv$lambda.min),lty=2)}
+
+cv<-cv.glmnet(x,y,family="binomial")
+lasso<-glmnet(x,y,family="binomial",lambda=cv$lambda.1se)
+coef(lasso)
+
+```
+*After computing diagnostics, all the results are 1 which is not reasonable, so a 10 fold CV was performed on the data. After this, the accuracy was only 0.67, the sensitivity was 0, the specificity was 1 and the auc was 0.49, so horrible. Doing a lasso retains none of the variables, so they are all terrible at determining gender of hurricane. This should not be surprising as gender is arbitrary.* 
+

@@ -1,8 +1,196 @@
 ---
-title: "Project 1"
-author: "Me"
-date: "2020-12-01"
+title: "project 1"
+author: "Helene Olsen"
+date: "4/4/2021"
 output: html_document
 ---
 
-## Test Project 1
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", 
+                      warning = F, message = F, tidy = TRUE, tidy.opts = list(width.cutoff = 60), 
+                      R.options = list(max.print = 100))
+
+```
+
+## R Markdown
+
+## Introduction
+For this project, I will be comparing three datasets. The first is data from my spotify account. This dataset consists of the date and time, artist name, track name, and ms played for each song. The next dataset is from my health app. This dataset also has date and time, and the amount of steps I took at each time. These two will be joined together with date. Because the songs and steps all occur at different times during the day, I made a dataset with the total steps for a day and total ms of music played for a day. Then I joined that with a dataset of the average weather each day in Port Aransas, Texas, where I was living at the time of this data being collected. I wanted to see if temperature had anything to do with the amount of steps I take or how much music I listen to. I did not know what to expect. 
+
+
+## Importing Data sets 
+
+```{R}
+library(tidyverse)
+library(ggplot2)
+
+#importing health app data 
+health <- read_csv("proj1heal.csv")
+
+#importing spotify app data 
+spotify <- read_csv('proj1spot.csv')
+
+#importing weather (will join later)
+weather <- read_csv('proj1weather.csv')
+```
+
+## Joining the first files together! 
+I will be doing a inner join so that my resulting data consists of only dates that overlap between the two data sets. My first health app dataset originally had 51,293 rows. My second spotify dataset originally had 1,411 rows. When joined, the resultant data set has 34,399 rows. There are less rows because I do not listen to spotify every day, but I do at least take one step a day. 
+
+```{R}
+#Need to make date into a separate column from time for both
+health <- health%>%separate(enddate,into = c("date", "time"), sep=' ', convert=T) %>% rename( steps = value )
+
+spotify <- spotify%>%separate(endTime, into = c("date", "time"), sep=' ', convert=T)
+
+#I join my spotify data with my health app data!
+joined1 <- inner_join(health, spotify, by="date")
+
+```
+
+## Now I am going to wrangle the data. 
+First I will use all six core dplyr functions, and then I will create summary statistics for each numeric variable. 
+
+```{R}
+#sort out all the songs and dates I listened to Jimmy Buffett (My favorite)
+joined1 %>% filter(artistName == "Jimmy Buffett")
+
+#selected columns that contain a "."
+joined1 %>% select(contains("."))
+
+#arranged the data by which time I took the most steps
+#fun fact, 4/23/20 was my 21st birthday. As you can see I listened to a lot of Pitbull
+joined1 %>% arrange(desc(steps))
+
+#group data by artist
+joined1 %>% group_by(artistName)
+
+#created a new column converting milliseconds to minutes
+joined1 %>% mutate(minsPlayed = msPlayed/60000)
+
+#used summarise to sum up all the steps taken within a single date
+joined1 %>% group_by(date) %>% summarise(sum=sum(steps))
+```
+Using the function filter we can see all the times I listened to Jimmy Buffett, which is a lot. Select can be used to select columns that have a '.' in them, and arrange can be used to arrange data by descending steps , as you can see I was most active when listening to Pitbull and other artists on my birthday , 4/23. Group_by is used to group the data by a certain variable, in this case artist. Mutate was used to convert ms played to minutes played. Lastly, group_by and summarise were used to group by date and add all the steps taken that day to see the total steps I took each day. 
+
+## Creating summary statistics:
+
+```{R}
+#overall
+joined1 %>% summarise_if(is.numeric, mean, na.rm = TRUE)
+joined1 %>% summarise_if(is.numeric, sd, na.rm = TRUE)
+joined1 %>% summarise_if(is.numeric, var, na.rm = TRUE)
+joined1 %>% summarise_if(is.numeric, quantile, na.rm = TRUE)
+joined1 %>% summarise_if(is.numeric, min, na.rm = TRUE)
+joined1 %>% summarise_if(is.numeric, max, na.rm = TRUE)
+joined1 %>% summarise_if(is.numeric, n_distinct, na.rm = TRUE)
+
+#when grouped by categorical variable 
+joined1 %>%
+  group_by(date) %>%
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+joined1 %>%
+  group_by(date) %>%
+  summarise_if(is.numeric, sd, na.rm = TRUE)
+joined1 %>%
+  group_by(date) %>%
+  summarise_if(is.numeric, var, na.rm = TRUE)
+joined1 %>%
+  group_by(date) %>%
+  summarise_if(is.numeric, quantile, na.rm = TRUE)
+joined1 %>%
+  group_by(artistName) %>%
+  summarise_if(is.numeric, min, na.rm = TRUE)
+joined1 %>%
+  group_by(artistName) %>%
+  summarise_if(is.numeric, max, na.rm = TRUE)
+joined1 %>%
+  group_by(artistName, trackName) %>%
+  summarise_if(is.numeric, n_distinct, na.rm = TRUE)
+
+```
+In the data summarized above, you can see that the mean steps I take (approx each hour)is 93.65, and the average ms I listen to a song is 137418.9 (around 2 minutes). The standard deviation is pretty high for both, and the minimum amount of steps is 1 while the minimum ms played is 0. The maximum steps taken is 1032, and the maximum time listened to a song is 516,893ms. When grouped by date, you can see the day I stepped the most average steps was 3/31/20, and most time listening to music was 4/30/20. 
+
+## Tidying data 
+Using the a data set 'tidy' I created, I will show the pivot functions. 
+```{r}
+#making the dataset
+tidy <- joined1 %>%
+  group_by(date) %>%
+  summarise(mean(steps))
+
+#First I will make month variables:
+tidy <- tidy%>%separate(date,into = c("month", "day/year"), convert=T)
+ 
+#Now I use pivot_wider to sort by month
+untidy <- tidy %>% pivot_wider(names_from="month", values_from="mean(steps)")
+
+#Now I will put everything back in place using pivot_longer
+tidy <- untidy%>% pivot_longer(c("12","3", "4", "5"), names_to="month", values_to="mean(steps)") %>% drop_na()
+
+```
+
+## Joining in the weather dataset 
+I used the sum of steps and ms played per day to create a new dataset that I joined with weather data for each date I had data for. Because my data is sorted by time as well as date, I want to get rid of the time variable. This way I can look at total steps taken, total ms of music listened to, and the temperature each day. I did not do this earlier because I wanted to see information about the amount of songs/artists I listen to in the previous summary statistics.
+```{r}
+summed <- joined1 %>%
+  group_by(date) %>%
+  summarise_if(is.numeric, sum, na.rm = TRUE)
+
+#then I'll join in the weather data for interesting graphs
+data <- inner_join(weather, summed, by="date")
+```
+
+
+## Making some plots
+
+```{R}
+#first a correlation heatmap:
+data %>% select_if(is.numeric) %>% cor %>% as.data.frame %>%  rownames_to_column %>% pivot_longer(-1) %>%  ggplot(aes(rowname,name,fill=value))+geom_tile()+  geom_text(aes(label=round(value,2)))+  xlab("")+ylab("")+coord_fixed()+  scale_fill_gradient2(low="purple", mid='white', high="pink")+ggtitle("Heatmap")
+```
+In this heatmap you can see that there is a high positive correlation between steps and msPlayed. This indicated that on days when I listen to more music, I am more likely to take more steps. On the other hand, there is a negative correlation between ms played and temperature (Fº), which indicates that I listen to more music when the tempertaure is cooler. There is a nonexistant correlation between steps I take and temperature, this is interesting as it indicates that I do the same amount of activity regardless of the weather. 
+
+```{R}
+#A scatterplot to show the relationship between steps and msPlayed, which had the highest correlation according to the heat map
+ggplot(data, aes(steps, msPlayed, color=F))+geom_point(size=3)+  scale_x_log10(labels=scales::number)+scale_y_log10(labels=scales::number)+ scale_color_gradient(low="yellow", high="red")+ ggtitle('Steps Compared to ms of Music Played')
+
+```
+In this graph you can see that the more steps I take, the more music I listened to. The weather varies. I changed the scale of the tick marks on the the x and y axis in this graph to remove the empty space that was originally in the top portion of the graph. In addition, I changed the data labels to not be in scientific notation.
+
+```{r}
+#making a bar graph that compares my top artists by how often I listen to them, and how active I am while listening to them. 
+joined1 %>% group_by(artistName) %>% summarise_if(is.numeric, sum, na.rm = TRUE) %>%
+    arrange(desc(msPlayed)) %>%
+    slice(1:5) %>% ggplot(., aes(x = artistName, y = msPlayed, fill=steps))+  geom_bar(stat="summary", position="dodge")+ ggtitle('Top Artists Listened to and my Activity while Listening to Them')
+```
+Here we can see which artists I listen to the most. I seem to be very active when listening to the Beach Boys, and not very active when listening to Billy Joel. I share my spotify with my mom which is why the the Beatles and Elton John are very high, although I do enjoy Elton John which is why he is my top artist. I was living in Port Aransas, Texas this semester and so I listended to lots of Beach Boys when at the beach, which accounts for all the steps as I would walk to the beach! I would listen to Billy Joel with my lab partner, which is why there are less steps because lab days I was less active. We were huge Billy Joel fans and planned on going to a concert, but then Covid hit :( . 
+
+
+## Dimensionality Reduction
+
+```{R}
+#determine best number of clusters, which is 2 
+#library(cluster)
+#pam_dat<-data%>%select(steps, msPlayed, F)
+
+#sil_width<-vector()
+#for(i in 2:10){  
+  #pam_fit <- pam(pam_dat, k = i)  
+  #sil_width[i] <- pam_fit$silinfo$avg.width  
+#}
+#ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
+
+#run PAM
+#pam2<-data%>%pam(2)
+#pam2
+
+
+#visualize 
+#pamclust<-data%>%mutate(cluster=as.factor(pam2$clustering)) 
+#pamclust%>%ggplot(aes(steps,msPlayed,color=cluster))+geom_point()+ggtitle('Cluster') 
+
+#plot(pam2,which=2)
+```
+The clustering done above shows how the data is spread between all the variables. The cluster was done to see if data falls into groups where they are distinct from other groups of data, and to sense regularity. First I determined the best number of clusters to make using silhouette width, which accounts for both similarity within groups and difference from other groups. The ideal number of clusters was found to be 2. Then, I used pam, a function in R, to cluster the data. In this visualization, you can see that while most data points fall on the lower level of ms played per day, some days I listened to a lot of music, forming another cluster. Looking at the silhouette plot of the data, there is a high silhouette width, which suggests a strong structure. 
