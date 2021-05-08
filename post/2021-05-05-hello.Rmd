@@ -8,12 +8,7 @@ tags: []
 description: ''
 ---
 
-```{r}
-#thanks for stopping by
-#xoxo 
-#- helene*
-```
+Hello! 
+  
+  Thanks for stopping by :)
 
-[Link to project 1](/project/project1/)
-
-[Link to google](https://www.google.com)

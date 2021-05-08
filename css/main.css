@@ -91,7 +91,7 @@ html, body {
   margin: 20px 0;
 }
 .container a {
-  color: #ccccff;
+  color: #b0b0f5;
 }
 .container a:hover {
   color: #ccccff;
@@ -186,7 +186,7 @@ html, body {
   text-decoration: none !important;
 }
 .text-muted {
-	color: #ccccff;
+	color: #b0b0f5;
 }
 div.footer{
   border-bottom: 5px solid #ccccff;;
