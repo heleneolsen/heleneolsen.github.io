@@ -1,5 +1,5 @@
 ---
-title: 'Hello '
+title: 'Integrating Python code in R'
 author: ''
 date: '2021-05-05'
 slug: hello
@@ -9,6 +9,41 @@ description: ''
 ---
 
 Hello! 
-  
-  Thanks for stopping by :)
+  In this blog post I will discuss how R Markdown can utilize more than one language in its code chunks. 
+  You can type code in R like 
+```{r}
+#R Code Chunk 
+numbers <- c(1,2,3,4,5)
+mean(numbers)
+```
+  You can also type code in Python like 
+```{python}
+#Python Code Chunk
+import statistics
+from statistics import mean
+numbers1 = [1,2,3,4,5]
+mean(numbers1)
+```
+  Reticulate lets you interact R code with Python code!
+```{R}
+#R code chunk
+library(reticulate)
 
+hi<-"Hello"
+```
+
+```{python}
+#Python code chunk
+hi="world"
+print(r.hi,hi) 
+```
+
+```{R}
+#R code chunk
+cat(c(hi,py$hi))
+```
+
+
+That's it for now! Thanks for stopping by :)
+
+![](https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.theleader.com.au%2Fstory%2F4842659%2Fwhales-wave-goodbye-after-a-bumper-season%2F&psig=AOvVaw3iHP6pZeDTpmHkPpkL_0_N&ust=1620585230821000&source=images&cd=vfe&ved=0CAIQjRxqFwoTCLjNusrcuvACFQAAAAAdAAAAABAJ)

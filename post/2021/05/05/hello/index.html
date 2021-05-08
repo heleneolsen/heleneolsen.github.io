@@ -7,7 +7,7 @@
     <meta name="author" content="Helene Olsen" />
     
     <link rel="shortcut icon" type="image/x-icon" href="../../../../../img/favicon.ico">
-    <title>Hello </title>
+    <title>Integrating Python code in R</title>
     <meta name="generator" content="Hugo 0.83.1" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="../../../../../css/main.css" />
@@ -54,7 +54,7 @@
       <div class="container">
         <div class="blog-post">
           <h3>
-            <strong><a href="../../../../../post/2021/05/05/hello/">Hello </a></strong>
+            <strong><a href="../../../../../post/2021/05/05/hello/">Integrating Python code in R</a></strong>
           </h3>
         </div>
  
@@ -72,8 +72,34 @@
               
 
 
-<p>Hello!</p>
-<p>Thanks for stopping by :)</p>
+<p>Hello!
+In this blog post I will discuss how R Markdown can utilize more than one language in its code chunks.
+You can type code in R like</p>
+<pre class="r"><code>#R Code Chunk 
+numbers &lt;- c(1,2,3,4,5)
+mean(numbers)</code></pre>
+<pre><code>## [1] 3</code></pre>
+<p>You can also type code in Python like</p>
+<pre class="python"><code>#Python Code Chunk
+import statistics
+from statistics import mean
+numbers1 = [1,2,3,4,5]
+mean(numbers1)</code></pre>
+<pre><code>## 3</code></pre>
+<p>Reticulate lets you interact R code with Python code!</p>
+<pre class="r"><code>#R code chunk
+library(reticulate)
+
+hi&lt;-&quot;Hello&quot;</code></pre>
+<pre class="python"><code>#Python code chunk
+hi=&quot;world&quot;
+print(r.hi,hi) </code></pre>
+<pre><code>## Hello world</code></pre>
+<pre class="r"><code>#R code chunk
+cat(c(hi,py$hi))</code></pre>
+<pre><code>## Hello world</code></pre>
+<p>That’s it for now! Thanks for stopping by :)</p>
+<p><img src="https://www.google.com/url?sa=i&amp;url=https%3A%2F%2Fwww.theleader.com.au%2Fstory%2F4842659%2Fwhales-wave-goodbye-after-a-bumper-season%2F&amp;psig=AOvVaw3iHP6pZeDTpmHkPpkL_0_N&amp;ust=1620585230821000&amp;source=images&amp;cd=vfe&amp;ved=0CAIQjRxqFwoTCLjNusrcuvACFQAAAAAdAAAAABAJ" /></p>
 
             
         <hr>         <div class="related-posts">

@@ -8,13 +8,14 @@
     <language>en-US</language>
     <lastBuildDate>Wed, 05 May 2021 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Hello </title>
+      <title>Integrating Python code in R</title>
       <link>/post/2021/05/05/hello/</link>
       <pubDate>Wed, 05 May 2021 00:00:00 +0000</pubDate>
       
       <guid>/post/2021/05/05/hello/</guid>
-      <description>Hello!
-Thanks for stopping by :)</description>
+      <description>Hello! In this blog post I will discuss how R Markdown can utilize more than one language in its code chunks. You can type code in R like
+#R Code Chunk numbers &amp;lt;- c(1,2,3,4,5) mean(numbers) ## [1] 3 You can also type code in Python like
+#Python Code Chunk import statistics from statistics import mean numbers1 = [1,2,3,4,5] mean(numbers1) ## 3 Reticulate lets you interact R code with Python code!</description>
     </item>
     
   </channel>
