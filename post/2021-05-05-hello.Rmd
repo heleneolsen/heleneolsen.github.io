@@ -41,6 +41,7 @@ print(r.hi,hi)
 ```{R}
 #R code chunk
 cat(c(hi,py$hi))
+getwd()
 ```
 
 ![](/stor/home/hao327/website/2-mrliable.png)
